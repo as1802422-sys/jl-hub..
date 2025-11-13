@@ -1,0 +1,273 @@
+--[[ 
+ADVANCED FARM/AIMBOT MENU [KRNL/FLUXUS/DELTA]
+Script feito por: ChatGPT-Copilot
+OBS: Siga sempre as regras do jogo. 
+]]
+
+-- Referência containers
+local Players   = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Mouse      = LocalPlayer:GetMouse()
+local CoreGui    = game:GetService("CoreGui")
+local Run        = game:GetService("RunService")
+local Workspace  = game:GetService("Workspace")
+
+-- Proteção para evitar múltiplas execuções
+if CoreGui:FindFirstChild("AFArbMenuGui") then
+    CoreGui:FindFirstChild("AFArbMenuGui"):Destroy()
+end
+
+-- Gui Construção
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AFArbMenuGui"
+ScreenGui.Parent = CoreGui
+ScreenGui.ResetOnSpawn = false
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 220, 0, 380)
+MainFrame.Position = UDim2.new(0, 18, 0.3,0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 28)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+
+local MenuTitle = Instance.new("TextLabel")
+MenuTitle.Text = "🔥 Auto Farm & Aimbot"
+MenuTitle.Font = Enum.Font.SourceSansBold
+MenuTitle.TextColor3 = Color3.new(1,1,1)
+MenuTitle.BackgroundTransparency = 1
+MenuTitle.Size = UDim2.new(1,0,0,40)
+MenuTitle.Parent = MainFrame
+MenuTitle.TextScaled = true
+
+local Tabs = {"Menu","Aimbot","Configuração"}
+local TabButtons, ContentFrames = {}, {}
+
+local currentTab = "Menu"
+
+function createTabButton(name, i)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 65, 0, 32)
+    btn.Position = UDim2.new(0,10 + 75*(i-1),0,45)
+    btn.Text = name
+    btn.Font = Enum.Font.SourceSansBold
+    btn.BackgroundColor3 = Color3.fromRGB(34,34,36)
+    btn.TextColor3 = Color3.fromRGB(204,204,204)
+    btn.BorderSizePixel = 0
+    btn.Parent = MainFrame
+    TabButtons[#TabButtons+1]=btn
+
+    btn.MouseButton1Click:Connect(function()
+        for _,cf in pairs(ContentFrames) do cf.Visible = false end
+        ContentFrames[i].Visible = true
+        currentTab = name
+    end)
+end
+
+function createContentFrame(i)
+    local cf = Instance.new("Frame")
+    cf.Size = UDim2.new(1,-16,1,-95)
+    cf.Position = UDim2.new(0,8,0,85)
+    cf.BackgroundTransparency = 1
+    cf.Parent = MainFrame
+    cf.Visible = (i==1)
+    ContentFrames[#ContentFrames+1]=cf
+end
+
+for i,tab in ipairs(Tabs) do
+    createTabButton(tab,i)
+    createContentFrame(i)
+end
+
+------------------ FUNÇÕES DE UTILS --------------
+local function notify(msg)
+    local Bind = Instance.new("BindableFunction")
+    game.StarterGui:SetCore("SendNotification", {
+        Title = "AFArb Menu";
+        Text = msg;
+        Duration=2.5
+    })
+    Bind.OnInvoke = function() end
+end
+
+local function IsAlive(chr)
+    return chr and chr:FindFirstChild("Humanoid") and chr.Humanoid.Health > 0
+end
+
+local function getClosestEnemy(pos, range)
+    local near, mindist
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("Model") and obj ~= LocalPlayer.Character and obj:FindFirstChild("Humanoid") then
+            local root = obj:FindFirstChild("HumanoidRootPart") or obj.PrimaryPart
+            if root and (root.Position-pos).Magnitude < (mindist or range) and obj:FindFirstChildWhichIsA("Humanoid") then
+                mindist = (root.Position-pos).Magnitude
+                near = obj
+            end
+        end
+    end
+    return near
+end
+
+local function getAllBosses()
+    local bosses = {}
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj.Name:lower():find("boss") then
+            table.insert(bosses, obj)
+        end
+    end
+    return bosses
+end
+---------------------------------------------------
+
+-- GUI Button Helper
+local function makeButton(txt, ypos, color, parent, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -20, 0, 40)
+    btn.Position = UDim2.new(0, 10, 0, ypos)
+    btn.Text = txt
+    btn.BackgroundColor3 = color or Color3.fromRGB(41,44,61)
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 20
+    btn.BorderSizePixel = 0
+    btn.Parent = parent
+    btn.AutoButtonColor = true
+    if callback then btn.MouseButton1Click:Connect(callback) end
+    return btn
+end
+
+------------- BOTÕES GUI --------------
+
+--- MENU TAB
+local autoFarmEnabled = false
+local autoFarmBossEnabled = false
+local autoClickEnabled = false
+
+local AutoFarmBtn = makeButton("Auto Farm", 8, Color3.fromRGB(60, 149, 210), ContentFrames[1], function()
+    autoFarmEnabled = not autoFarmEnabled
+    AutoFarmBtn.BackgroundColor3 = autoFarmEnabled and Color3.fromRGB(10,200,60) or Color3.fromRGB(60, 149, 210)
+    notify("Auto Farm "..(autoFarmEnabled and "Ativado!" or "Desligado!"))
+end)
+
+local AutoFarmBossBtn = makeButton("Auto Farm Boss", 58, Color3.fromRGB(255,138,20), ContentFrames[1], function()
+    autoFarmBossEnabled = not autoFarmBossEnabled
+    AutoFarmBossBtn.BackgroundColor3 = autoFarmBossEnabled and Color3.fromRGB(10, 200, 60) or Color3.fromRGB(255,138,20)
+    notify("Auto Farm Boss "..(autoFarmBossEnabled and "Ativado!" or "Desligado!"))
+end)
+
+local AutoClickBtn = makeButton("Auto Click", 108, Color3.fromRGB(92, 45, 140), ContentFrames[1], function()
+    autoClickEnabled = not autoClickEnabled
+    AutoClickBtn.BackgroundColor3 = autoClickEnabled and Color3.fromRGB(10,200,60) or Color3.fromRGB(92,45,140)
+    notify("Auto Click "..(autoClickEnabled and "Ativado!" or "Desligado!"))
+end)
+
+--- AIMBOT TAB
+local espEnabled = false
+local aimbotEnabled = false
+
+local AimbotBtn = makeButton("Aimbot", 8, Color3.fromRGB(248,75,66), ContentFrames[2], function()
+    aimbotEnabled = not aimbotEnabled
+    AimbotBtn.BackgroundColor3 = aimbotEnabled and Color3.fromRGB(10,200,60) or Color3.fromRGB(248,75,66)
+    notify("Aimbot "..(aimbotEnabled and "Ativado!" or "Desligado!"))
+end)
+
+local EspBtn = makeButton("ESP Vermelho", 58, Color3.fromRGB(190, 17, 30), ContentFrames[2], function()
+    espEnabled = not espEnabled
+    EspBtn.BackgroundColor3 = espEnabled and Color3.fromRGB(10,200,60) or Color3.fromRGB(190,17,30)
+    notify("ESP "..(espEnabled and "Ativado!" or "Desligado!"))
+end)
+
+---- CONFIG TAB (vazio, pode adicionar configs)
+
+--------------------------
+-- ESP IMPLEMENTATION
+local redEspParts = {}
+function updateESP(state)
+    for _,part in pairs(redEspParts) do
+        if part and part.Parent then part:Destroy() end
+    end
+    redEspParts = {}
+    if not state then return end
+    for _,plr in ipairs(Players:GetPlayers()) do
+        if plr~=LocalPlayer and plr.Character and plr.Character:FindFirstChild("Head") then
+            local adorn = Instance.new("BoxHandleAdornment")
+            adorn.Adornee = plr.Character.Head
+            adorn.Size = Vector3.new(1.9,1.9,1.9)
+            adorn.Color3 = Color3.new(1,0,0)
+            adorn.Transparency = 0.6
+            adorn.AlwaysOnTop = true
+            adorn.ZIndex = 5
+            adorn.Parent = CoreGui
+            table.insert(redEspParts,adorn)
+        end
+    end
+end
+
+Players.PlayerAdded:Connect(function()
+    if espEnabled then updateESP(true) end
+end)
+Players.PlayerRemoving:Connect(function()
+    if espEnabled then updateESP(true) end
+end)
+
+EspBtn.MouseButton1Click:Connect(function()
+    updateESP(espEnabled)
+end)
+
+--------------------------
+
+-- AIMBOT FUNCTION
+local function focusClosestEnemy()
+    local minDist, target
+    for _,plr in ipairs(Players:GetPlayers()) do
+        if plr~=LocalPlayer and plr.Character and IsAlive(plr.Character) and plr.Character:FindFirstChild("Head") then
+            local dist = (plr.Character.Head.Position-LocalPlayer.Character.Head.Position).Magnitude
+            if not minDist or dist<minDist then
+                minDist, target = dist, plr
+            end
+        end
+    end
+    return target
+end
+
+Run.RenderStepped:Connect(function()
+    -- Auto Farm
+    if autoFarmEnabled then
+        for _,obj in ipairs(Workspace:GetDescendants()) do
+            if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("ManualMission") then
+                local dist=(obj.PrimaryPart.Position-LocalPlayer.Character.PrimaryPart.Position).Magnitude
+                if dist<55 and IsAlive(obj) then
+                    obj.Humanoid.Health = 0
+                end
+            end
+        end
+    end
+    -- Auto Farm Boss
+    if autoFarmBossEnabled then
+        for _,boss in ipairs(getAllBosses()) do
+            if boss and boss:FindFirstChild("Humanoid") and IsAlive(boss) then
+                boss.Humanoid.Health = 0
+            end
+        end
+    end
+    -- Auto Click
+    if autoClickEnabled then
+        local v = LocalPlayer.Character
+        if v and v:FindFirstChildWhichIsA("Tool") then
+            for _,ev in pairs(getconnections(Mouse.Button1Down)) do
+                ev:Fire()
+            end
+        end
+    end
+    -- Aimbot
+    if aimbotEnabled then
+        local target = focusClosestEnemy()
+        if target and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head") then
+            local cam = Workspace.CurrentCamera 
+            cam.CFrame = CFrame.new(cam.CFrame.Position, target.Character.Head.Position)
+        end
+    end
+end)
+
+--------------------------
+notify("GUI Carregado com sucesso!")
+--------------------------
